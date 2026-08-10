@@ -1,0 +1,92 @@
+app:
+  name: "Enterprise-RAG-StarterKit"
+  version: "0.1.0"
+  environment: "development"
+  debug: true
+
+# ==============================================================================
+# PATH A: DATA INGESTION & STORAGE CONFIGURATION
+# ==============================================================================
+ingestion:
+  # Chunking Strategy: "hierarchical" (Small-to-Big) | "semantic" | "recursive"
+  chunking_strategy: "hierarchical"
+  
+  # Hierarchical (Small-to-Big) Parameters
+  parent_chunk_size: 1200
+  child_chunk_size: 250
+  chunk_overlap: 40
+  
+  # Semantic Chunking Parameters (used when strategy is "semantic")
+  semantic_breakpoint_percentile_threshold: 95
+  
+  # Visual & Table Extraction
+  extract_markdown_tables: true
+  enable_ocr: true
+  ocr_language: "eng"
+  
+  # Deduplication
+  enable_sha256_deduplication: true
+
+storage:
+  vector_db_type: "pgvector"
+  collection_name: "enterprise_knowledge_base"
+  distance_metric: "cosine"
+  hnsw_m: 16
+  hnsw_ef_construction: 64
+  hnsw_ef_search: 40
+  
+  # BM25 Sparse Index Configuration
+  bm25:
+    k1: 1.5
+    b: 0.75
+    language: "english"
+
+# ==============================================================================
+# PATH B: AGENTIC QUERY & RETRIEVAL CONFIGURATION
+# ==============================================================================
+agent:
+  # Step 1.5: Semantic Caching
+  semantic_cache:
+    enabled: true
+    similarity_threshold: 0.96
+    ttl_seconds: 86400
+    
+  # Step 5: Query Decomposition
+  max_sub_queries: 3
+  
+  # Step 6 & 7: Retrieval & Reciprocal Rank Fusion (RRF)
+  dense_top_k: 10
+  sparse_top_k: 10
+  rrf_k: 60
+  
+  # Step 8: Cross-Encoder Reranking
+  reranker:
+    provider: "flashrank"             # "flashrank" (local fast) | "cohere"
+    model_name: "ms-marco-TinyBERT-L-2-v2"
+    top_n: 5
+    min_relevance_threshold: 0.20     # Step 8.5: Confidence Gate threshold
+
+  # Step 11: Output Guardrail & Hallucination Reflection Loop
+  enable_hallucination_check: true
+  max_reflection_retries: 1
+
+# ==============================================================================
+# OBSERVABILITY & PROMPT HUB CONFIGURATION
+# ==============================================================================
+observability:
+  # Supported: "langfuse" | "langsmith" | "phoenix" | "none"
+  backend: "langfuse"
+  
+  # Strict Remote Prompt Hub (FAIL-FAST, NO LOCAL FALLBACK)
+  strict_remote_hub: true
+  prompt_registry_name: "rag-qa-enterprise"
+  prompt_version: "production"
+  cache_ttl_seconds: 300
+
+# ==============================================================================
+# SUPERVISOR & BUDGET GUARDS
+# ==============================================================================
+supervisor:
+  timeout_seconds: 60
+  max_tokens_budget_per_run: 4000
+  track_monetary_cost: true
